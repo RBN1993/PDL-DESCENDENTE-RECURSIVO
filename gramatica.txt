@@ -1,0 +1,79 @@
+////Comentario: gramatica
+////Simbolos terminales
+////No se si los tipo sean tokens
+
+Axioma = PP
+Terminales = { var id prompt write return if while function eof salto ( ) { }  =  + && > -- , num cadena true false int chars bool }
+NoTerminales = { PP P B F A H HH W T TP E EP U UP V VP L Q S SP X C R }
+
+Producciones = {
+PP -> P ////1
+P -> B P ////2
+P -> F P ////3
+P -> eof ////4
+
+F -> function HH id ( A ) { C } ////5
+
+HH -> int ////6
+HH -> chars ////7
+HH -> bool ////8
+HH -> lambda ////9
+
+A -> H id R ////10
+A -> lambda ////11
+
+R -> , H id R ////12
+R -> lambda ////13
+
+C -> B C ////14
+C -> lambda ////15
+
+B -> var H id W ////16
+B -> if ( E ) S ////17
+B -> while ( E ) { C } ////18
+B -> S ////19
+
+S -> prompt ( id ) ////20
+S -> write ( E ) ////21
+S -> return X  ////22
+S -> id SP ////23
+SP -> ( L ) ////24
+SP -> = E ////25
+SP -> -- ////26
+
+X -> E ////27
+X -> lambda ////28
+ 
+H -> int ////29
+H -> chars ////30
+H -> bool ////31
+
+W -> = E ////32
+W -> lambda ////33
+
+E -> T EP ////34
+EP -> && T EP ////35
+EP -> lambda ////36
+T -> U TP ////37
+TP -> > U TP ////38
+TP -> lambda ////39
+U -> V UP ////40
+UP -> + V UP ////41
+UP -> lambda ////42
+V -> ( E ) ////43
+V -> num ////44
+V -> cadena ////45
+V -> true ////46
+V -> false ////47
+V -> id VP ////48
+VP -> ( L ) ////49
+VP -> -- ////50
+VP -> = V ////51
+VP -> lambda ////52
+
+L -> E Q ////53
+L -> lambda ////54
+
+Q -> , E Q ////55
+Q -> lambda ////56
+}
