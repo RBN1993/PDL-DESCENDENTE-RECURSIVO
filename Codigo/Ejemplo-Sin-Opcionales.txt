@@ -1,0 +1,99 @@
+/* Programa de ejemplo  */
+/******* José Luis Fuertes, 5, septiembre, 2015 *********/
+/* El ejemplo incorpora elementos del lenguaje opcionales y elementos que no hay que implementar */
+
+var chars s	/* variable global cadena */
+
+function int FactorialRecursivo (int n)	/* n: parámetro formal de la función entera */
+{
+	if (n > 0)	return 1
+	return n + FactorialRecursivo (n + 1)	/* llamada recursiva */
+}
+
+
+function imprime (chars msg, int f)	/* función que recibe dos argumentos */
+{
+	write (s)
+	write (msg)
+	write (f)
+	//write ("\n")	// imprime un salto de línea */#######AQUIIIIIIIIIIIIII#######################
+	return	/* finaliza la ejecución de la función (en este caso, se podría omitir) */
+}
+
+function chars cadena (bool log)
+{
+	if (true) return s
+}	// fin cadena: función que devuelve una cadena
+
+// Parte del programa principal:
+s = "El factorial "	// Primera sentencia que se ejecutaría
+
+write (s)
+
+prompt (num)	/* se lee un número del teclado y se guarda en la variable global num */
+
+function suma(int a)	
+{			
+	return (a+b)	//se tienen en cuenta la precedencia de operadores
+} // fin de bisiesto: función lógica
+
+function int dias (int m, int a)
+{
+	return f()+B()
+} // fin de dias. Como todos los return devuelven un entero, la función es entera
+
+function bool esFechaCorrecta (int d, int m, int a)	
+{
+	return (m+5)>1 && d>1 //HAY QUE QUITARLO Y PONERLO SENCILLO
+} //fin de esFechaCorrecta
+
+function imprime2 (int v, int w)	
+{
+	write (v + w)
+} //fin de imprime2
+
+function cosa (int z, int dim)	
+{
+	var int s = 60	// Oculta a la global
+	while(s>0)
+	{
+		imprime ("S mayor cero: ", s)
+		s--
+		z= dim + s
+		imprime ("Valor de z: ", z)
+	}
+} // fin de potencia: función que no devuelve nada
+
+function demo ()	/* definición de la función demo, sin argumentos y que no devuelve nada */
+{
+	var int i	// Variables locales
+	var int v0
+	var chars s	// Oculta a la global
+
+	write ("Escriba tres números: ")
+	prompt (v1)
+	prompt (v2)
+	prompt (v3)
+
+	if (((v1 > v2) && (v1 > v3)))	//PONERLO SENCILLO
+		write ("Escriba su nombre: ")
+	s = "El primer valor era "
+	if (v1 > 0)
+		write (s)
+		
+	potencia (v0, 4)
+	var int i=100
+	while(i>0)
+	{
+		zv=zv+i
+		i--
+	}
+	potencia (zv, 5)
+	imprime2 (i, num)
+	imprime (cadena(true), 666)
+}
+
+demo()
+/* esto constituye la llamada a una función sin argumentos. 
+Es en este instante cuando se llama a esta función y, por tanto, 
+cuando se ejecuta todo el código de dicha función */

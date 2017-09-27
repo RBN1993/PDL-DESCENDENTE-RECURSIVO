@@ -1,0 +1,7 @@
+Ya existe la variable--> num Linea: 5
+Error semántico: tipoY izq(chars) no coincide tipo der (bool) --> true en la línea 5
+Ya existe la variable local--> b Linea: 8
+Error semántico: tipo izqE(bool) no coincide tipo der (int) --> 2 en la línea 12
+Error semantico: la comprobacion de suma no es correcta Linea: 12
+Error semántico: tipoX izq(int) no coincide tipo der (chars) --> "Verdad" en la línea 25
+Fin de ejecuciOn

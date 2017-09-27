@@ -1,0 +1,1074 @@
+
+PARSER_BEGIN(LexicoSintactico)
+import java.util.*;
+import java.io.*;
+
+class LexicoSintactico
+{
+	static String parser="Descencente ";
+
+	//###############   PARA FUNCIONES   ######################################################
+	static FormatoTS elemento = new FormatoTS("","","",0,null);
+	static String idFuncion;
+	static String tipoFuncion = "";
+	static int contParam = 0;
+	static ArrayList<String> tipoParams = new ArrayList<String>();
+	static String idParam = "";
+	static boolean esLocal = false;
+	
+	//###############   PARA FUERA DE FUNCIONES   #############################################
+	static String variable;
+	static String tipoVariable;
+	
+	//############### RESTO DE AUXILIARES #####################################################
+	static String tipoRetorno = "";
+	static String tipoIzq = "";
+	static boolean esRetorno = false;
+	static String derLlamada="";
+	static String der="";
+	static String izq=""; //a=b()
+	static boolean esLlamada=false;
+	static String copiaLLamada=""; //cogemos el lexema de la llamada
+	static int contParamLlamada=0;
+	static String tipoArrayParam="";
+	static ArrayList<String> tipoParamsLlamada = new ArrayList<String>();
+
+
+	static boolean esExp=false;
+	static int contExp=0;
+	
+	static boolean esMayor=false;
+	static boolean esSuma=false;
+	static boolean esAnd=false;
+	static boolean esDecremento=false;
+	static String primerMayor="";
+	static String primerSuma="";
+	static String primerAnd="";
+	static String tipoDec="";
+
+	public static void main( String[] args) throws ParseException,IOException
+	{	
+		LexicoSintactico analizador = new LexicoSintactico(System.in);
+		analizador.Iniciar();
+		System.out.println("Fin de ejecuciOn");	
+		generarToken.imprimir();
+		generarParser.imprimir();
+	} 
+
+}
+PARSER_END(LexicoSintactico)
+
+TOKEN: //Palabras reservadas
+{
+	<VAR:"var">{generarToken.insertar("PalabraReservada","var");}//kind 1
+	| <FUNCTION:"function">{generarToken.insertar("PalabraReservada","function");}
+	| <PROMPT:"prompt">{generarToken.insertar("PalabraReservada","prompt");}
+	| <WRITE:"write">{generarToken.insertar("PalabraReservada","write");}
+	| <WHILE:"while">{generarToken.insertar("PalabraReservada","while");}
+	| <IF:"if">{generarToken.insertar("PalabraReservada","if");}
+	| <RETURN:"return">{}
+	| <INT:"int">{generarToken.insertar("PalabraReservada","int");}
+	| <CHARS:"chars">{generarToken.insertar("PalabraReservada","chars");}
+	| <BOOL:"bool">{generarToken.insertar("PalabraReservada","bool");}  //kind 10 
+}
+
+TOKEN: //Lógico
+{
+	<TRUE:"true">{generarToken.insertar("PalabraReservada","true");}
+	| <FALSE:"false">{generarToken.insertar("PalabraReservada","false");}
+}
+
+TOKEN: //OPERADORES ARITMÉTICOS, LÓGICOS
+{
+	<SUMA:"+">{}
+	| <POST_DECREMENTO:"--">{}//kind 15
+	| <MAYOR:">">{}
+	| <AND:"&&">{}
+	| <ASIG:"=">{}
+}
+
+TOKEN: //SIMBOLOS
+{
+	<COMA:",">{generarToken.insertar("Coma",",");}
+	| <LLAVE_A:"{">{}//kind20
+	| <LLAVE_C:"}">{}
+	| <PAREN_A:"(">{}
+	| <PAREN_C:")">{}
+}
+
+TOKEN: //Identificadores
+{
+	<ID:["a"-"z","A"-"Z"](["a"-"z","A"-"Z","0"-"9","_"])* >{}
+}
+
+TOKEN: //Cadena
+{
+	<CADENA:("\"")(~["\"","\\","\n","\r"])*("\"")>{}//kind 25
+}
+
+TOKEN: //Enteros con signo
+{
+	<DECIMAL:(["0"-"9"])+>{if(Integer.parseInt(image+ "")>32767)System.err.println("Numero mayor que 32767");} 
+}
+
+SKIP: //Espacios etc ignorados
+{
+	" "
+	| "\t"
+	| "\r"
+	| "\r\n"
+	| "\n"
+}
+
+SKIP: //Comentarios
+{
+	<"//"(~["\n","\r"])*> ///simple 
+	| <"/*"(~["/"])*"*/"> ///varias líneas
+}
+
+
+void Iniciar():
+{
+	TablaDeSimbolos.crearTablaGlobal();
+	TablaDeSimbolos.imprimirPalR();
+}
+{
+	P() 	
+}
+
+void P():
+{} 
+{
+	B(){tipoRetorno="";}P()
+	| F()P()
+	| <EOF> 
+}
+
+void F():
+{}
+{
+	<FUNCTION>HH()<ID>{
+		idFuncion=token.image;
+		generarToken.insertar("Identificador",token.image);
+	}
+	<PAREN_A>{generarToken.insertar("ParentesisAbierto","(");}
+	A()
+	<PAREN_C>{
+		
+		if(TablaDeSimbolos.busquedaFuncion("function",idFuncion,tipoFuncion,contParam,tipoParams)==true){
+			System.out.println("Ya existe la funcion--> "+idFuncion+" Linea: "+token.beginLine);
+		}else{
+			// System.out.println("Insertamos funcion : '"+idFuncion+"' con numero de parametros: "+contParam);
+			elemento = new FormatoTS("function",idFuncion,tipoFuncion,contParam,tipoParams);
+			tipoParams=new ArrayList<String>();//Reinicializamos
+			tipoFuncion="";
+			TablaDeSimbolos.insertarTsgFun(elemento);
+		}
+		
+		generarToken.insertar("ParentesisCerrado",")");
+	
+	}
+	
+	<LLAVE_A>{
+		//Limpiamos tipoIzq
+		tipoIzq="";
+		//Para tsl 
+		TablaDeSimbolos.imprimirTitulo();
+		TablaDeSimbolos.imprimirParam();
+		generarToken.insertar("LlaveAbierta","{");
+		esLocal=true;
+	}
+	
+	C()
+	
+	<LLAVE_C>{
+		
+		TablaDeSimbolos.setTablesLocal();
+		esLocal=false;
+		contParam=0;//Reiniciamos contadores
+		generarToken.insertar("LlaveCerrada","}");
+	}
+}
+void HH():
+{}
+{	[<INT>{
+		tipoFuncion=token.image;
+		tipoRetorno=token.image;
+		
+	}
+	| <CHARS>{
+		tipoFuncion=token.image;
+		tipoRetorno=token.image;
+	}
+	| <BOOL>{
+		tipoFuncion=token.image;
+		tipoRetorno=token.image;
+	}]
+	
+}
+
+void A():
+{}
+{	
+	[H()<ID>{
+		contParam++;
+		//Para tsl
+		idParam=token.image;//ADEMAS AQUI CREO Q SOLO BASTA CON INTRODUCIR PORQUE ES EL PRIMER PARAM
+		if(TablaDeSimbolos.busquedaParamTsl(idParam)==true){
+			System.out.println("Ya existe el parametro-->"+idParam+" Linea: "+token.beginLine);
+		}else{
+		
+			elemento = new FormatoTS("var",idParam,tipoVariable,0,null);//MIRAAAAaaaaaaaaaaaaaaaaaR
+			TablaDeSimbolos.insertarTslParam(elemento);
+		}
+		generarToken.insertar("Identificador",token.image);
+		}R()]
+}
+
+void R():
+{}
+{	
+	[<COMA>
+	H()<ID>{
+		contParam++;
+		//Para tsl 
+		idParam=token.image;
+		if(TablaDeSimbolos.busquedaParamTsl(idParam)==true){
+			System.out.println("Ya existe el parametro--> "+idParam+" Linea: "+token.beginLine);
+		}else{
+		
+			elemento = new FormatoTS("var",idParam,tipoVariable,0,null);
+			TablaDeSimbolos.insertarTslParam(elemento);
+		}
+		
+		generarToken.insertar("Identificador",token.image);
+	}R()]
+}
+
+void C():
+{}
+{
+	[B()C()]
+}
+
+void B():
+{}
+{
+	<VAR>H()<ID>{
+		
+		variable=token.image;
+		if(esLocal==false){
+			if(TablaDeSimbolos.busquedaVar("var",variable)==true){
+				System.out.println("Ya existe la variable--> "+variable+" Linea: "+token.beginLine);
+			}else{
+				// System.out.println("Insertamos variable : '"+variable+"' de tipo: '"+tipoVariable+"'");
+				elemento = new FormatoTS("var",variable,tipoVariable,0,null);
+				// tipoVariable="";//Reinicializamos
+				TablaDeSimbolos.insertarTsgVar(elemento);
+			}
+		}else{//Local
+			if(TablaDeSimbolos.busquedaVarTsl(variable)==true){
+				System.out.println("Ya existe la variable local--> "+variable+" Linea: "+token.beginLine);
+			}else{
+		
+				elemento = new FormatoTS("var",variable,tipoVariable,0,null);
+				TablaDeSimbolos.insertarTslVar(elemento);
+			}
+		}
+		tipoParams=new ArrayList<String>();//Reinicializamos para que no de conflicto en function
+		generarToken.insertar("Identificador",token.image);
+	}
+	W(){ tipoIzq = "";}
+	
+	| <IF><PAREN_A>{generarToken.insertar("ParentesisAbierto","(");}
+	E(){
+		esMayor=false; esSuma=false; esAnd=false;esDecremento=false;
+	}<PAREN_C>{
+		
+		generarToken.insertar("ParentesisCerrado",")");
+		
+	}S() ///habria que ver lo de
+	
+	| <WHILE><PAREN_A>{generarToken.insertar("ParentesisAbierto","(");}E()<PAREN_C>{generarToken.insertar("ParentesisCerrado",")");}
+	<LLAVE_A>{generarToken.insertar("LlaveAbierta","{");}
+	C()
+	<LLAVE_C>{generarToken.insertar("LlaveCerrada","}");}
+	| S()
+}
+
+void S():
+{}
+{
+	<PROMPT><PAREN_A>{generarToken.insertar("ParentesisAbierto","(");}
+	<ID>{
+		if(esLocal==false){
+			String varPrompt = TablaDeSimbolos.buscarIDTsg(token.image);
+	
+			if(varPrompt != null){
+				if(!varPrompt.equals("int") && !varPrompt.equals("chars")){
+					System.out.println("Error semantico: la variable en prompt es de tipo bool en la linea "+token.beginLine);
+				}
+			}else{
+				
+				FormatoTS sinDeclarar = new FormatoTS("var",token.image,"int",0,null);
+				TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+			}
+		}else{//LOCAL
+			String varPrompt = TablaDeSimbolos.buscarIDTsl(token.image);
+			if(varPrompt==null){
+				varPrompt = TablaDeSimbolos.buscarIDTsg(token.image);
+				if(varPrompt==null){
+					FormatoTS sinDeclarar = new FormatoTS("var",token.image,"int",0,null);
+					TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+				}else{
+					if(!varPrompt.equals("int") && !varPrompt.equals("chars")){
+					System.out.println("Error semantico: la variable en prompt es de tipo bool en la linea "+token.beginLine);
+					}
+				}
+			}else{
+				if(!varPrompt.equals("int") && !varPrompt.equals("chars")){
+					System.out.println("Error semantico: la variable en prompt es de tipo bool en la linea "+token.beginLine);
+				}
+			}
+		}
+		
+		generarToken.insertar("Identificador",token.image);
+		
+	}<PAREN_C>{generarToken.insertar("ParentesisCerrado",")");}
+	| <WRITE><PAREN_A>{generarToken.insertar("ParentesisAbierto","(");}E()<PAREN_C>{generarToken.insertar("ParentesisCerrado",")");}
+	| <RETURN>{
+		esRetorno = true;
+		generarToken.insertar("PalabraReservada","return");
+	}X(){esRetorno=false; contExp=0; esMayor=false; esSuma=false; esAnd=false;}
+	| <ID>
+	{	
+		der = token.image;
+		izq=token.image; // para asignacion
+		
+		generarToken.insertar("Identificador",token.image);
+	}Sp(){
+		// if(esLocal==false)
+		// {
+			// String derecha = TablaDeSimbolos.buscarIDTsg(der); //devuelve int, chars, bool
+
+			// if(derecha!=null)
+			// {
+				// if(!derecha.equals(tipoIzq) && tipoIzq!="" && esRetorno==false)
+				// {
+					// System.out.println("Error semSantico: la variable "+der+" no es de tipo (int) en la línea "+token.beginLine);
+				// }
+
+			// }else //no existe variable
+			// {
+				// FormatoTS sinDeclarar = new FormatoTS("var",der,"int",0,null);
+				// TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+			// }	
+		// }else{
+			// String derecha = TablaDeSimbolos.buscarIDTsl(der);
+			// if(){
+				
+			// }
+				
+			if(esDecremento==true){
+				if(tipoDec!="int")
+					System.out.println("Error semantico: la comprobacion de postDecremento no es correcta Linea: "+token.beginLine);
+					esDecremento=false;
+			}
+			
+		// }
+	}
+}
+
+void Sp():
+{}
+{
+	<PAREN_A>{contExp=0;esLlamada=true; generarToken.insertar("ParentesisAbierto","(");}
+	L()
+	<PAREN_C>{
+		// if(esLocal==false)
+		// {	
+			// System.out.println("IZQ: "+izq);
+			// System.out.println("parametros : "+contParamLlamada);
+			// System.out.println("IZQ: "+izq);
+			String derLlamada2 = TablaDeSimbolos.buscarLlamadaTsg(izq,contParamLlamada, tipoParamsLlamada);
+			if(derLlamada2 != null)
+			{
+				if(!tipoIzq.equals(derLlamada2) && tipoIzq != "" && esRetorno==false)
+				{
+					System.out.println("Error semantico: tipo izq("+tipoIzq+") no coincide tipo der ("+derLlamada2+") --> "+izq+" en la línea "+token.beginLine);				
+				}
+			}else
+			{
+				System.out.println("Error Semático: la función "+izq+" no está declarada con nº de parametros: "+contParamLlamada+" o con tipo de parametros distintos en la línea "+token.beginLine);
+				
+			}
+		// }
+		esLlamada=false;
+		contParamLlamada=0;
+		contExp=0;
+		tipoParamsLlamada = new ArrayList<String>();
+		 
+		generarToken.insertar("ParentesisCerrado",")");
+		
+	}
+	| <ASIG>
+	{	
+		
+		if(esLocal==false)
+		{
+			
+			String derecha = TablaDeSimbolos.buscarIDTsg(izq); //devuelve int, chars, bool
+
+			if(derecha!=null)
+			{
+				tipoIzq=derecha;
+			}else //no existe variable
+			{
+				FormatoTS sinDeclarar = new FormatoTS("var",izq,"int",0,null);
+				TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+				tipoIzq="int";
+			}	
+		}else{
+			String derecha = TablaDeSimbolos.buscarIDTsl(izq); //devuelve int, chars, bool
+
+			if(derecha==null)
+			{
+				derecha = TablaDeSimbolos.buscarIDTsg(izq); 
+				if(derecha==null){
+					FormatoTS sinDeclarar = new FormatoTS("var",izq,"int",0,null);
+					TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+					tipoIzq="int";
+				}else{
+					tipoIzq=derecha;
+				}
+			}else //no existe variable
+			{
+				tipoIzq=derecha;
+				
+			}	
+		}
+
+		generarToken.insertar("Asignacion","="); 
+		
+	}E(){ tipoIzq=""; contExp=0;}
+	
+	| <POST_DECREMENTO>
+	{
+		esDecremento=true;
+		String derecha= TablaDeSimbolos.buscarIDTsl(der);
+		if(derecha==null){
+			derecha= TablaDeSimbolos.buscarIDTsg(der);
+			if(derecha==null){
+				tipoDec="int";
+				FormatoTS sinDeclarar = new FormatoTS("var",der,"int",0,null);
+				TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+			}
+			else
+				tipoDec=derecha;
+		}else{
+			
+			tipoDec=derecha;
+		}
+		generarToken.insertar("PostDecremento",token.image);
+	}
+}
+
+void X():
+{}
+{
+	[LOOKAHEAD(2)E()] ////aqui tambien da el warning, el return puede devolver lambda
+}
+
+void H():
+{}
+{
+	<INT>{
+		//########### FUNCIONES ###############
+		tipoParams.add(token.image);
+		//########### VARIABLES ###############
+		tipoVariable=token.image;
+		tipoIzq=token.image;
+	}
+	| <CHARS>{
+		//########### FUNCIONES ###############
+		tipoParams.add(token.image);
+		//########### VARIABLES ###############
+		tipoVariable=token.image;
+		tipoIzq=token.image;
+	}
+	| <BOOL>{
+		//########### FUNCIONES ###############
+		tipoParams.add(token.image);
+		//########### VARIABLES ###############
+		tipoVariable=token.image;
+		tipoIzq=token.image;
+	}
+}
+
+void W():
+{}
+{
+	[<ASIG>{generarToken.insertar("Asignacion","=");}E(){
+		
+		
+	}]
+}
+
+void E():
+{}
+{	
+	T()Ep(){esMayor=false; esSuma=false; esAnd=false;}
+}
+
+void Ep():
+{}
+{
+	[<AND>{
+		esAnd=true;
+		generarToken.insertar("And",token.image);
+	}T()Ep()]
+}
+
+void T():
+{}
+{
+	U()Tp()
+}
+
+void Tp():
+{}
+{
+	[<MAYOR>{
+		esMayor=true;
+		generarToken.insertar("MayorQue",">");
+	}U()Tp()]
+}
+
+void U():
+{}
+{
+	V()Up()
+}
+
+void Up():
+{}
+{
+	[<SUMA>{
+		esSuma=true;
+		generarToken.insertar("Suma",token.image);
+	}V()Up()]
+}
+
+void V():
+{}
+{
+	<PAREN_A>{generarToken.insertar("ParentesisAbierto","(");}E()<PAREN_C>{generarToken.insertar("ParentesisCerrado",")");}
+	| <DECIMAL>{
+		
+		// if(esLocal==false){
+			if(esMayor==false)
+				primerMayor="int";
+			
+			if(esSuma==false)
+				primerSuma="int";
+			
+			if(esAnd==false)
+				primerAnd="int";
+			
+			if (esLlamada==false)
+			{
+				if(tipoIzq.equals("int")==false && tipoIzq!="" && esRetorno==false){
+					System.out.println("Error semántico: tipo izq("+tipoIzq+") no coincide tipo der (int) --> "+token.image+" en la línea "+token.beginLine);
+				}
+
+				if(tipoRetorno.equals("int")==false && esRetorno==true){
+					System.out.println("Error semántico: el valor de retorno no es correcto --> "+tipoRetorno+" != int: "+token.image+" en la línea "+token.beginLine);
+					esRetorno=false;
+				}
+				if(esMayor==true){
+					if(primerMayor.equals("int")==false){
+						System.out.println("Error semantico: la comprobacion de mayor que no es correcta Linea: "+token.beginLine);
+					}
+				 esMayor=false;
+				}
+				if(esSuma==true){
+					if(primerSuma!="int"){
+						System.out.println("Error semantico: la comprobacion de suma no es correcta Linea: "+token.beginLine);
+						
+					}
+				esSuma=false;		
+					
+				}
+				if(esAnd==true){
+					System.out.println("Error semantico: la comprobacion de and no es correcta Linea: "+token.beginLine);
+					esAnd=false;
+				}
+			}else
+			{
+				contExp++;
+
+				if(contExp==1)
+					tipoArrayParam="int";
+
+				if(!tipoArrayParam.equals("int") && tipoArrayParam != "")
+				{
+					System.out.println("Error Semántico: la expresión no es de tipo (int) en la linea "+token.beginLine+" en la columna "+token.beginColumn);
+					tipoArrayParam="null";
+				}
+			}
+		// }
+		//MIRAR PARA LOS PARAMETROS EN LAS LLAMADAS
+		generarToken.insertar("Numero",token.image);
+	}
+	| <CADENA>{
+	
+		// if(esLocal==false){
+			if(esMayor==false)
+				primerMayor="chars";
+			
+			if(esSuma==false)
+				primerSuma="chars";
+			
+			if(esAnd==false)
+				primerAnd="chars";
+			
+			if(esLlamada==false)
+			{
+				if(tipoIzq.equals("chars")==false && tipoIzq!="" && esRetorno==false){
+					System.out.println("Error semántico: tipo izq("+tipoIzq+") no coincide tipo der (chars) --> "+token.image+" en la línea "+token.beginLine);
+				}
+				if(tipoRetorno.equals("chars")==false && esRetorno==true){
+					System.out.println("Error semántico: el valor de retorno no es correcto --> "+tipoRetorno+" != chars: "+token.image+" en la línea "+token.beginLine);
+					esRetorno=false;
+				}
+				if(esMayor==true){
+					System.out.println("Error semantico: la comprobacion de qmayor que no es correcta Linea: "+token.beginLine);
+					esMayor=false;
+				}
+				if(esSuma==true){
+					System.out.println("Error semantico: la comprobacion de qsuma no es correcta Linea: "+token.beginLine);
+					esSuma=false;
+				}
+				if(esAnd==true){
+					System.out.println("Error semantico: la comprobacion de and no es correcta Linea: "+token.beginLine);
+					esAnd=false;
+				}
+			}else
+			{
+				contExp++;
+				if(contExp==1)
+					tipoArrayParam="chars";	
+				if(!tipoArrayParam.equals("chars") && tipoArrayParam!="")
+				{
+					System.out.println("Error Semántico: la expresión no es de tipo chars en la linea "+token.beginLine+" en la columna "+token.beginColumn);
+					tipoArrayParam="null";
+				}
+			}
+		// 
+		generarToken.insertar("Cadena",token.image);
+	}
+	| <TRUE>{
+
+		// if(esLocal==false){
+			if(esMayor==false)
+				primerMayor="bool";
+			
+			if(esSuma==false)
+				primerSuma="bool";
+			
+			if(esAnd==false)
+				primerAnd="bool";
+			
+			if(esLlamada==false)
+			{
+				if(tipoIzq.equals("bool")==false && tipoIzq!="" && esRetorno==false){
+					System.out.println("Error semántico: tipo izq("+tipoIzq+") no coincide tipo der (bool) --> "+token.image+" en la línea "+token.beginLine);
+				}
+				if(tipoRetorno.equals("bool")==false && esRetorno==true){
+					System.out.println("Error semántico: el valor de retorno no es correcto --> "+tipoRetorno+" != bool: "+token.image+" en la línea "+token.beginLine);
+					esRetorno=false;
+				}
+				if(esMayor==true){
+					System.out.println("Error semantico: la comprobacion de mayor que no es correcta Linea: "+token.beginLine);
+					esMayor=false;
+				}
+				if(esSuma==true){
+					System.out.println("Error semantico: la comprobacion de suma no es correcta Linea: "+token.beginLine);
+					esSuma=false;
+				}
+				if(esAnd==true){
+					if(primerAnd!="bool")
+						System.out.println("Error semantico: la comprobacion de and no es correcta Linea: "+token.beginLine);
+					esAnd=false;
+				}
+			}else
+			{
+				contExp++;
+
+				if(contExp==1)
+					tipoArrayParam="bool";
+
+				if(!tipoArrayParam.equals("bool") && tipoArrayParam != "")
+				{
+					System.out.println("Error Semántico: la expresión no es de tipo bool en la linea "+token.beginLine+" en la columna "+token.beginColumn);
+					tipoArrayParam="null";
+				}
+			}
+		// }
+	}
+	| <FALSE>{
+
+		// if(esLocal==false){
+			if(esMayor==false)
+				primerMayor="bool";
+			
+			if(esSuma==false)
+				primerSuma="bool";
+			
+			if(esAnd==false)
+				primerAnd="bool";
+			
+			if(esLlamada==false)
+			{
+				if(tipoIzq.equals("bool")==false && tipoIzq!="" && esRetorno==false){
+					System.out.println("Error semántico: tipo izq("+tipoIzq+") no coincide tipo der (bool) --> "+token.image+" en la línea "+token.beginLine);
+				}
+				if(tipoRetorno.equals("bool")==false && esRetorno==true){
+					System.out.println("Error semántico: el valor de retorno no es correcto --> "+tipoRetorno+" != bool: "+token.image+" en la línea "+token.beginLine);
+					esRetorno=false;
+				}
+				if(esMayor==true){
+					System.out.println("Error semantico: la comprobacion de mayor que no es correcta Linea: "+token.beginLine);
+					esMayor=false;
+				}
+				if(esSuma==true){
+					System.out.println("Error semantico: la comprobacion de suma no es correcta Linea: "+token.beginLine);
+					esSuma=false;
+				}
+				if(esAnd==true){
+					if(primerAnd!="bool")
+						System.out.println("Error semantico: la comprobacion de and no es correcta Linea: "+token.beginLine);
+					esAnd=false;
+				}
+			}else
+			{
+				contExp++;
+
+				if(contExp==1)
+					tipoArrayParam="bool";
+
+				if(!tipoArrayParam.equals("bool") && tipoArrayParam != "")
+				{
+					System.out.println("Error Semántico: la expresión no es de tipo bool en la linea "+token.beginLine+" en la columna "+token.beginColumn);
+					tipoArrayParam="null";
+				}
+			}
+		// }
+	} 
+	| <ID>{
+		derLlamada = token.image;
+		der = token.image;
+		
+		// if(esLocal==false)
+		// {	
+			// System.out.println("llamada es "+esLlamada);
+			if(esLlamada==true) 
+			{
+				contExp++;
+
+				String lexemaTipo = TablaDeSimbolos.buscarIDTsg(der);
+
+				if(lexemaTipo!=null)
+				{
+					if(contExp==1)
+						tipoArrayParam=lexemaTipo;
+
+					if(!tipoArrayParam.equals(lexemaTipo) && tipoArrayParam != "")
+					{
+						System.out.println("Error Semántico: la expresión no es de tipo "+ lexemaTipo+ " en la linea "+token.beginLine+" en la columna "+token.beginColumn);
+						tipoArrayParam="null";
+					}
+				}else //no existe variable
+				{
+					//FormatoTS sinDeclarar = new FormatoTS("var",der,"int",0,null);
+					//TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+
+					tipoArrayParam="int";
+				}	
+
+				// esLlamada=false;
+			}
+		// }
+
+		generarToken.insertar("Identificador",token.image);
+	}Vp() 
+	{
+		if(esLocal==false) //estoy en la tsg y es llamada
+		{
+			if(esLlamada == false)
+			{
+				
+				String derecha = TablaDeSimbolos.buscarIDTsg(der); //devuelve int, chars, bool
+				
+				if(derecha != null)
+				{
+					
+					if(!tipoIzq.equals(derecha) && tipoIzq != "" && esRetorno==false)
+					{
+						System.out.println("Error semantico: tipo izq("+tipoIzq+") no coincide tipo der ("+derecha+") --> "+der+" en la línea "+token.beginLine);
+					}
+					if(tipoRetorno.equals(derecha)==false && esRetorno==true){
+						System.out.println("Error semántico: el valor de retorno no es correcto --> "+tipoRetorno+" != "+derecha+": "+der+" en la línea "+token.beginLine);
+						esRetorno=false;
+					}
+					if(esMayor==false)
+						primerMayor=derecha;
+					
+					if(esSuma==false)
+						primerSuma=derecha;
+					
+					if(esAnd==false)
+						primerAnd=derecha;
+					
+					if(esMayor==true){
+						if(primerMayor!="int" || derecha!="int"){
+							System.out.println("Error semantico: la comprobacion de mayor que no es correcta Linea: "+token.beginLine);
+						}
+					 esMayor=false;
+					}
+					if(esSuma==true){
+						if(derecha!="int")
+						System.out.println("Error semantico: la comprobacion de suma no es correcta Linea: "+token.beginLine);
+						esSuma=false;
+					}
+					if(esAnd==true){
+						if(primerAnd!="bool" || derecha!="bool")
+							System.out.println("Error semantico: la comprobacion de and no es correcta Linea: "+token.beginLine);
+						esAnd=false;
+					}
+
+				}else //no existe variable
+				{	
+					FormatoTS sinDeclarar = new FormatoTS("var",der,"int",0,null);
+					TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+					
+					if(esMayor==false)
+						primerMayor="int";
+					
+					if(esSuma==false)
+						primerSuma="int";
+					
+					if(esAnd==false)
+						primerAnd="int";
+					
+					if(esMayor==true){
+						if(primerMayor.equals("int")==false){
+							System.out.println("Error semantico: la comprobacion de mayor que no es correcta Linea: "+token.beginLine);
+						}
+					 esMayor=false;
+					}
+				
+					esSuma=false;
+					
+					if(esAnd==true){
+			
+						System.out.println("Error semantico: la comprobacion de and no es correcta Linea: "+token.beginLine);
+						esAnd=false;
+					}
+					
+					if(!tipoIzq.equals("int") && tipoIzq!="" && esRetorno==false)
+					{
+						System.out.println("Error semantico: tipo izq("+tipoIzq+") no coincide tipo der (int) --> "+der+" en la línea "+token.beginLine);
+					}
+					if(tipoRetorno.equals(derecha)==false && esRetorno==true){
+						System.out.println("Error semántico: el valor de retorno no es correcto --> "+tipoRetorno+" != "+derecha+": "+der+" en la línea "+token.beginLine);
+						esRetorno=false;
+					}
+				}
+			}
+		}else{//LOCAL
+			if(esLlamada == false)
+			{
+				// System.out.println("DER es: : "+der);
+				String derecha = TablaDeSimbolos.buscarIDTsl(der); //devuelve int, chars, bool
+				// System.out.println("DERECHA ES : "+derecha);
+				if(derecha != null)//si existe derecha
+				{
+					
+					if(!tipoIzq.equals(derecha) && tipoIzq != "" && esRetorno==false)
+					{
+						System.out.println("Error semantico: tipo izq("+tipoIzq+") no coincide tipo der ("+derecha+") --> "+der+" en la línea "+token.beginLine);
+					}
+					if(tipoRetorno.equals(derecha)==false && esRetorno==true){
+						System.out.println("Error semántico: el valor de retorno no es correcto --> "+tipoRetorno+" != "+derecha+": "+der+" en la línea "+token.beginLine);
+						esRetorno=false;
+					}
+					if(esMayor==false)
+						primerMayor=derecha;
+					
+					if(esSuma==false)
+						primerSuma=derecha;
+					
+					if(esAnd==false)
+						primerAnd=derecha;
+					
+					
+					if(esMayor==true){
+						if(primerMayor!="int" || derecha!="int"){
+							System.out.println("Error semantico: la comprobacion de mayor que no es correcta Linea: "+token.beginLine);
+						}
+					 esMayor=false;
+					}
+					if(esSuma==true){
+						if(derecha!="int")
+						System.out.println("Error semantico: la comprobacion de suma no es correcta Linea: "+token.beginLine);
+						esSuma=false;
+					}
+					if(esAnd==true){
+						if(primerAnd!="bool" || derecha!="bool")
+							System.out.println("Error semantico: la comprobacion de and no es correcta Linea: "+token.beginLine);
+						esAnd=false;
+					}
+
+				}else //no existe variable entonces vamos a la global 
+				{	
+					// System.out.println("DER2 es: : "+der);
+
+					derecha= TablaDeSimbolos.buscarIDTsg(der);
+					// System.out.println("DERECHA2 es: : "+derecha);
+
+					if(derecha==null){
+						FormatoTS sinDeclarar = new FormatoTS("var",der,"int",0,null);
+						TablaDeSimbolos.insertarTsgVar(sinDeclarar);
+						derecha="int";
+					}
+					if(esMayor==false)
+					primerMayor="int";
+					
+					if(esSuma==false)
+						primerSuma="int";
+					
+					if(esAnd==false)
+						primerAnd="int";
+					
+					if(esMayor==true){
+						if(primerMayor.equals("int")==false){
+							System.out.println("Error semantico: la comprobacion de mayor que no es correcta Linea: "+token.beginLine);
+						}
+					 esMayor=false;
+					}
+				
+					esSuma=false;
+					
+					if(esAnd==true){
+			
+						System.out.println("Error semantico: la comprobacion de and no es correcta Linea: "+token.beginLine);
+						esAnd=false;
+					}
+					// System.out.println("TipoIzq es: "+tipoIzq);
+						// System.out.println("DerechaQ es: "+derecha);
+					if(!tipoIzq.equals(derecha) && tipoIzq!="" && esRetorno==false)
+					{
+						System.out.println("Error semantico: tipo izq("+tipoIzq+") no coincide tipo der (int) --> "+der+" en la línea "+token.beginLine);
+					}
+					if(tipoRetorno.equals(derecha)==false && esRetorno==true){
+						System.out.println("Error semántico: el valor de retorno no es correcto --> "+tipoRetorno+" != "+derecha+": "+der+" en la línea "+token.beginLine);
+						esRetorno=false;
+					}
+				}
+				if(esDecremento==true){
+					if(tipoDec!="int")
+						System.out.println("Error semantico: la comprobacion de postDecremento no es correcta Linea: "+token.beginLine);
+
+						esDecremento=false;
+				}
+			}
+		}
+		esLlamada=false;
+	}
+}
+
+void Vp():
+{}
+{
+	[<PAREN_A>
+	{	
+		esLlamada = true;
+		copiaLLamada = derLlamada;
+		generarToken.insertar("ParentesisAbierto","(");
+		
+	}L()<PAREN_C>
+	{
+		// TablaDeSimbolos.
+		String derLlamada2 = TablaDeSimbolos.buscarLlamadaTsg(copiaLLamada,contParamLlamada, tipoParamsLlamada);
+
+		// if(esLocal==false)
+		// {
+			if(derLlamada2 != null)
+			{
+				if(!tipoIzq.equals(derLlamada2) && tipoIzq != "" && esRetorno==false)
+				{
+					System.out.println("Error semantico: tipo izq("+tipoIzq+") no coincide tipo der ("+derLlamada2+") --> "+copiaLLamada+" en la línea "+token.beginLine);				
+				}
+			}else
+			{
+				System.out.println("Error Semático: la función "+copiaLLamada+" no está declarada con nº de parametros: "+contParamLlamada+" o con tipo de parametros distintos en la línea "+token.beginLine);
+				
+			}
+			
+		// }
+		
+		generarToken.insertar("ParentesisCerrado",")");
+
+		contParamLlamada=0;
+		contExp=0;
+		tipoParamsLlamada = new ArrayList<String>();
+
+	}
+	|<POST_DECREMENTO>
+	{	
+		esDecremento=true;
+		String derecha= TablaDeSimbolos.buscarIDTsl(der);
+		if(derecha==null){
+			derecha= TablaDeSimbolos.buscarIDTsg(der);
+			if(derecha==null)
+				tipoDec="int";
+			else
+				tipoDec=derecha;
+		}else{
+			
+			tipoDec=derecha;
+		}
+		
+
+		generarToken.insertar("PostDecremento",token.image);
+	}
+	|<ASIG>{generarToken.insertar("Asignacion","=");}V()]
+	
+}
+
+void L():
+{}
+{
+	[E()
+	{
+		contParamLlamada=1; 
+		tipoParamsLlamada.add(tipoArrayParam); 
+		contExp=0;
+		// tipoArrayParam="";//PARECE QUE SOBRA PORQUE SE PISA
+	}Q()]
+}
+
+void Q():
+{}
+{
+	[<COMA>
+	{
+		contParamLlamada++;
+	}E()
+	{
+		tipoParamsLlamada.add(tipoArrayParam); 
+		// tipoArrayParam="";//PARECE QUE SOBRA PORQUE SE PISA
+		contExp=0;
+	}Q()]
+}
