@@ -1,4 +1,4 @@
-# PDL-DESCENDENTE-RECURSIVO
+# Procesadores De Lenguajes - DESCENDENTE-RECURSIVO
 Se plantea realizar el diseño e implementación de un procesador de lenguajes que realiza un análisis léxico, sintáctico y semántico 
 del lenguaje JavaScript-PL, incluyendo la tabla de símbolos local y global. Para el desarrollo de este analizador nos apoyamos de la 
 herramienta JavaCC que es un generador de analizadores sintácticos descendente. El código fuente está escrito en el lenguaje de Java,
